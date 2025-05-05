@@ -1,11 +1,9 @@
 <?php
 header('Content-Type: text/html; charset=utf-8');
 
-// Читаем cookies
 $errors = json_decode($_COOKIE['form_errors'] ?? '{}', true);
 $values = json_decode($_COOKIE['form_values'] ?? '{}', true);
 
-// Очищаем ошибки
 setcookie('form_errors', '', time() - 3600, '/');
 ?>
 <!DOCTYPE html>
@@ -13,6 +11,7 @@ setcookie('form_errors', '', time() - 3600, '/');
 <head>
     <meta charset="UTF-8">
     <title>Форма</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="form-container">
