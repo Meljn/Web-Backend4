@@ -42,8 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old_values['email'] = $email;
     if (empty($email)) {
         $errors['email'] = 'Поле E-mail обязательно для заполнения';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Введите корректный email адрес. Должен содержать @ и домен.';
+    } elseif (strlen($email) > 254) {
+        $errors['email'] = 'Email не должен превышать 254 символа';
+    } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $email)) {
+        $errors['email'] = 'Введите корректный email адрес. Формат: localpart@domain.tld. Допустимы буквы, цифры и символы ._%+-';
     }
     
     // Дата рождения
