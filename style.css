@@ -119,7 +119,7 @@ option:checked {
     margin: 20px auto;
     padding: 20px;
     background: #2e1f1f;
-    border-left: 4px solid #e53935;
+    border-left: 4px solid #d65454;
     border-radius: 8px;
     color: #ffcdd2;
 }
@@ -164,7 +164,7 @@ option:checked {
 }
 
 .input-error {
-    border: 2px solid red;
+    border: 2px solid #d65454;
 }
 
 select[multiple]::-webkit-scrollbar {
@@ -177,18 +177,18 @@ select[multiple]::-webkit-scrollbar-thumb {
 }
 
 .error {
-    color: red;
+    color: #d65454;
     font-size: 0.8em;
     margin-top: 5px;
 }
 .has-error {
-    border: 1px solid red;
+    border: 1px solid #d65454;
 }
 .error-messages {
-    color: red;
+    color: #d65454;
     margin-bottom: 20px;
     padding: 10px;
-    border: 1px solid red;
+    border: 1px solid #d65454;
     border-radius: 5px;
 }
 .form-group {
