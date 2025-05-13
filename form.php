@@ -21,79 +21,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $errors = [];
+    $formData = [];
 
-    $fio = trim($_POST['fio'] ?? '');
-    if (empty($fio)) {
+    foreach ($_POST as $key => $value) {
+        $formData[$key] = is_array($value) ? $value : trim($value);
+    }
+
+    if (empty($formData['fio'])) {
         $errors['fio'] = 'Поле ФИО обязательно для заполнения';
-    } elseif (!preg_match('/^[A-Za-zА-Яа-яЁё\s]+$/u', $fio)) {
+    } elseif (!preg_match('/^[A-Za-zА-Яа-яЁё\s]+$/u', $formData['fio'])) {
         $errors['fio'] = 'ФИО должно содержать только буквы и пробелы';
     }
 
-    $phone = trim($_POST['phone'] ?? '');
-    if (empty($phone)) {
+    if (empty($formData['phone'])) {
         $errors['phone'] = 'Поле Телефон обязательно для заполнения';
-    } elseif (!preg_match('/^\+?[0-9]{10,15}$/', $phone)) {
+    } elseif (!preg_match('/^\+?[0-9]{10,15}$/', $formData['phone'])) {
         $errors['phone'] = 'Телефон должен содержать 10-15 цифр, может начинаться с +';
     }
 
-    $email = trim($_POST['email'] ?? '');
-    if (empty($email)) {
+    if (empty($formData['email'])) {
         $errors['email'] = 'Поле Email обязательно для заполнения';
-    } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $email)) {
+    } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $formData['email'])) {
         $errors['email'] = 'Введите корректный email (пример: user@example.com)';
     }
 
-    $dob = $_POST['dob'] ?? '';
-    if (empty($dob)) {
+    if (empty($formData['dob'])) {
         $errors['dob'] = 'Поле Дата рождения обязательно для заполнения';
-    } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
+    } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $formData['dob'])) {
         $errors['dob'] = 'Введите дату в формате ГГГГ-ММ-ДД';
     }
 
-    $gender = $_POST['gender'] ?? '';
-    if (empty($gender)) {
+    if (empty($formData['gender'])) {
         $errors['gender'] = 'Укажите ваш пол';
-    } elseif (!in_array($gender, ['male', 'female'])) {
+    } elseif (!in_array($formData['gender'], ['male', 'female'])) {
         $errors['gender'] = 'Выбран недопустимый пол';
     }
 
-    $languages = $_POST['language'] ?? [];
-    if (empty($languages)) {
+    if (empty($formData['language'])) {
         $errors['language'] = 'Выберите хотя бы один язык программирования';
     }
 
-    $bio = trim($_POST['bio'] ?? '');
-    if (empty($bio)) {
+    if (empty($formData['bio'])) {
         $errors['bio'] = 'Поле Биография обязательно для заполнения';
     }
 
-    if (!isset($_POST['contract'])) {
+    if (!isset($formData['contract'])) {
         $errors['contract'] = 'Необходимо согласиться с условиями';
     }
 
     if (!empty($errors)) {
         foreach ($errors as $field => $error) {
             setcookie("error_$field", $error, time() + 3600, '/');
-            if (isset($_POST[$field])) {
-                $value = is_array($_POST[$field]) ? implode(',', $_POST[$field]) : $_POST[$field];
+        }
+        
+        foreach ($formData as $field => $value) {
+            if (is_array($value)) {
+                setcookie("value_$field", implode(',', $value), time() + 3600, '/');
+            } else {
                 setcookie("value_$field", $value, time() + 3600, '/');
             }
         }
+        
         include 'index.php';
         exit;
     }
 
     try {
         $pdo->beginTransaction();
+
         $stmt = $pdo->prepare("INSERT INTO Application (FIO, Phone_number, Email, Birth_day, Gender, Biography, Contract_accepted) 
                               VALUES (:fio, :phone, :email, :dob, :gender, :bio, :contract)");
         $stmt->execute([
-            ':fio' => $fio,
-            ':phone' => $phone,
-            ':email' => $email,
-            ':dob' => $dob,
-            ':gender' => $gender,
-            ':bio' => $bio,
+            ':fio' => $formData['fio'],
+            ':phone' => $formData['phone'],
+            ':email' => $formData['email'],
+            ':dob' => $formData['dob'],
+            ':gender' => $formData['gender'],
+            ':bio' => $formData['bio'],
             ':contract' => 1
         ]);
 
@@ -102,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("INSERT INTO Application_Languages (Application_ID, Language_ID) 
                               SELECT :app_id, Language_ID FROM Programming_Languages WHERE Name = :language");
         
-        foreach ($languages as $language) {
+        foreach ($formData['language'] as $language) {
             $stmt->execute([
                 ':app_id' => $application_id,
                 ':language' => $language
@@ -116,7 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setcookie($name, '', time() - 3600, '/');
             }
         }
-        foreach ($_POST as $field => $value) {
+
+        foreach ($formData as $field => $value) {
             if ($field !== 'contract') {
                 $value = is_array($value) ? implode(',', $value) : $value;
                 setcookie("success_$field", $value, time() + 60*60*24*365, '/');
