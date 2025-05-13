@@ -194,6 +194,16 @@ select[multiple]::-webkit-scrollbar-thumb {
 .form-group {
     margin-bottom: 15px;
 }
+
+.success-message {
+            background-color: #eeffee;
+            border: 1px solid #00aa00;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            color: #00aa00;
+}
+
 label {
     display: block;
     margin-bottom: 5px;

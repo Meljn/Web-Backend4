@@ -1,29 +1,35 @@
 <?php
 header('Content-Type: text/html; charset=utf-8');
 
-// Получаем данные из cookies
-$errors = [];
-$old_values = [];
-$success_values = [];
-
-if (isset($_COOKIE['form_errors'])) {
-    $errors = json_decode($_COOKIE['form_errors'], true);
-    // Удаляем cookie после использования
-    setcookie('form_errors', '', time() - 3600, '/');
+// Функция для безопасного получения значений полей
+function getFieldValue($fieldName, $default = '') {
+    // Приоритет: значение при ошибке -> успешное значение -> по умолчанию
+    if (isset($_COOKIE["error_$fieldName"])) {
+        $value = $_COOKIE["value_$fieldName"] ?? $default;
+        return htmlspecialchars($value);
+    }
+    if (isset($_COOKIE["success_$fieldName"])) {
+        return htmlspecialchars($_COOKIE["success_$fieldName"]);
+    }
+    return $default;
 }
 
-if (isset($_COOKIE['form_old_values'])) {
-    $old_values = json_decode($_COOKIE['form_old_values'], true);
-    // Удаляем cookie после использования
-    setcookie('form_old_values', '', time() - 3600, '/');
+// Функция для получения ошибки поля
+function getFieldError($fieldName) {
+    if (isset($_COOKIE["error_$fieldName"])) {
+        $error = $_COOKIE["error_$fieldName"];
+        return htmlspecialchars($error);
+    }
+    return '';
 }
 
-if (isset($_COOKIE['form_success_values'])) {
-    $success_values = json_decode($_COOKIE['form_success_values'], true);
+// Проверяем общие ошибки формы
+$formErrors = [];
+foreach ($_COOKIE as $name => $value) {
+    if (strpos($name, 'error_') === 0) {
+        $formErrors[] = $value;
+    }
 }
-
-// Приоритет значений: старые (при ошибке) > успешные > пустые
-$values = array_merge($success_values, $old_values);
 ?>
 
 <!DOCTYPE html>
@@ -31,109 +37,112 @@ $values = array_merge($success_values, $old_values);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Форма обратной связи</title>
     <link rel="stylesheet" href="style.css">
-    <title>Форма</title>
 </head>
 <body>
-    <div class="form-container">
-        <h1>Форма</h1>
-        
-        <?php if (!empty($errors)): ?>
-            <div class="error-messages">
-                <h2>Ошибки при заполнении формы:</h2>
-                <ul>
-                    <?php foreach ($errors as $error): ?>
-                        <li><?= htmlspecialchars($error) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
-        
-        <form action="form.php" method="post">
-            <div class="form-group <?= isset($errors['fio']) ? 'has-error' : '' ?>">
-                <label for="fio">ФИО:</label>
-                <input type="text" id="fio" name="fio" value="<?= htmlspecialchars($values['fio'] ?? '') ?>" required>
-                <?php if (isset($errors['fio'])): ?>
-                    <div class="error"><?= htmlspecialchars($errors['fio']) ?></div>
-                <?php endif; ?>
-            </div>            
+    <h1>Форма обратной связи</h1>
 
-            <div class="form-group <?= isset($errors['phone']) ? 'has-error' : '' ?>">
-                <label for="phone">Телефон:</label>
-                <input type="tel" id="phone" name="phone" value="<?= htmlspecialchars($values['phone'] ?? '') ?>" required>
-                <?php if (isset($errors['phone'])): ?>
-                    <div class="error"><?= htmlspecialchars($errors['phone']) ?></div>
-                <?php endif; ?>
-            </div>
+    <?php if (!empty($formErrors)): ?>
+        <div class="error-messages">
+            <h3>Ошибки при заполнении формы:</h3>
+            <ul>
+                <?php foreach ($formErrors as $error): ?>
+                    <li><?= $error ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
 
-            <div class="form-group <?= isset($errors['email']) ? 'has-error' : '' ?>">
-                <label for="email">E-mail:</label>
-                <input type="email" id="email" name="email" value="<?= htmlspecialchars($values['email'] ?? '') ?>" required>
-                <?php if (isset($errors['email'])): ?>
-                    <div class="error"><?= htmlspecialchars($errors['email']) ?></div>
-                <?php endif; ?>
-            </div>
+    <?php if (isset($_GET['success'])): ?>
+        <div class="success-message">
+            Данные успешно сохранены!
+        </div>
+    <?php endif; ?>
 
-            <div class="form-group <?= isset($errors['dob']) ? 'has-error' : '' ?>">
-                <label for="dob">Дата рождения:</label>
-                <input type="date" id="dob" name="dob" value="<?= htmlspecialchars($values['dob'] ?? '') ?>" required>
-                <?php if (isset($errors['dob'])): ?>
-                    <div class="error"><?= htmlspecialchars($errors['dob']) ?></div>
-                <?php endif; ?>
-            </div>
+    <form action="form.php" method="post">
 
-            <div class="form-group <?= isset($errors['gender']) ? 'has-error' : '' ?>">
-                <label>Пол:</label>
-                <label for="male">
-                    <input type="radio" id="male" name="gender" value="male" <?= ($values['gender'] ?? '') === 'male' ? 'checked' : '' ?> required> Мужской
-                </label>
-                <label for="female">
-                    <input type="radio" id="female" name="gender" value="female" <?= ($values['gender'] ?? '') === 'female' ? 'checked' : '' ?>> Женский
-                </label>
-                <?php if (isset($errors['gender'])): ?>
-                    <div class="error"><?= htmlspecialchars($errors['gender']) ?></div>
-                <?php endif; ?>
-            </div>
+        <div class="form-group <?= getFieldError('fio') ? 'has-error' : '' ?>">
+            <label for="fio">ФИО:</label>
+            <input type="text" id="fio" name="fio" value="<?= getFieldValue('fio') ?>" required>
+            <?php if ($error = getFieldError('fio')): ?>
+                <div class="error"><?= $error ?></div>
+            <?php endif; ?>
+        </div>
 
-            <div class="form-group <?= isset($errors['language']) ? 'has-error' : '' ?>">
-                <label for="language">Любимый язык программирования:</label>
-                <select id="language" name="language[]" multiple required>
-                    <?php
-                    $validLanguages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 
-                                     'Java', 'Haskell', 'Clojure', 'Prolog', 'Scala', 'Go'];
-                    $selectedLanguages = $values['language'] ?? [];
-                    foreach ($validLanguages as $lang): ?>
-                        <option value="<?= htmlspecialchars($lang) ?>" <?= in_array($lang, $selectedLanguages) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($lang) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (isset($errors['language'])): ?>
-                    <div class="error"><?= htmlspecialchars($errors['language']) ?></div>
-                <?php endif; ?>
-            </div>
+        <div class="form-group <?= getFieldError('phone') ? 'has-error' : '' ?>">
+            <label for="phone">Телефон:</label>
+            <input type="tel" id="phone" name="phone" value="<?= getFieldValue('phone') ?>" required>
+            <?php if ($error = getFieldError('phone')): ?>
+                <div class="error"><?= $error ?></div>
+            <?php endif; ?>
+        </div>
 
-            <div class="form-group <?= isset($errors['bio']) ? 'has-error' : '' ?>">
-                <label for="bio">Биография:</label>
-                <textarea id="bio" name="bio" rows="5" required><?= htmlspecialchars($values['bio'] ?? '') ?></textarea>
-                <?php if (isset($errors['bio'])): ?>
-                    <div class="error"><?= htmlspecialchars($errors['bio']) ?></div>
-                <?php endif; ?>
-            </div>
+        <div class="form-group <?= getFieldError('email') ? 'has-error' : '' ?>">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" value="<?= getFieldValue('email') ?>" required>
+            <?php if ($error = getFieldError('email')): ?>
+                <div class="error"><?= $error ?></div>
+            <?php endif; ?>
+        </div>
 
-            <div class="form-group <?= isset($errors['contract']) ? 'has-error' : '' ?>">
-                <label for="contract">
-                    <input type="checkbox" id="contract" name="contract" <?= ($values['contract'] ?? false) ? 'checked' : '' ?> required> С контрактом ознакомлен(а)
-                </label>
-                <?php if (isset($errors['contract'])): ?>
-                    <div class="error"><?= htmlspecialchars($errors['contract']) ?></div>
-                <?php endif; ?>
-            </div>
+        <div class="form-group <?= getFieldError('dob') ? 'has-error' : '' ?>">
+            <label for="dob">Дата рождения:</label>
+            <input type="date" id="dob" name="dob" value="<?= getFieldValue('dob') ?>" required>
+            <?php if ($error = getFieldError('dob')): ?>
+                <div class="error"><?= $error ?></div>
+            <?php endif; ?>
+        </div>
 
-            <div class="form-group">
-                <button type="submit">Сохранить</button>
-            </div>
-        </form>
-    </div>
+        <div class="form-group <?= getFieldError('gender') ? 'has-error' : '' ?>">
+            <label>Пол:</label>
+            <label>
+                <input type="radio" name="gender" value="male" <?= getFieldValue('gender') === 'male' ? 'checked' : '' ?> required> Мужской
+            </label>
+            <label>
+                <input type="radio" name="gender" value="female" <?= getFieldValue('gender') === 'female' ? 'checked' : '' ?>> Женский
+            </label>
+            <?php if ($error = getFieldError('gender')): ?>
+                <div class="error"><?= $error ?></div>
+            <?php endif; ?>
+        </div>
+
+        <div class="form-group <?= getFieldError('language') ? 'has-error' : '' ?>">
+            <label for="language">Любимые языки программирования:</label>
+            <select id="language" name="language[]" multiple required>
+                <?php
+                $languages = ['Pascal', 'C', 'C++', 'JavaScript', 'PHP', 'Python', 'Java', 'Haskell', 'Clojure', 'Prolog', 'Scala', 'Go'];
+                $selected = explode(',', getFieldValue('language', ''));
+                foreach ($languages as $lang): ?>
+                    <option value="<?= htmlspecialchars($lang) ?>" <?= in_array($lang, $selected) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($lang) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <?php if ($error = getFieldError('language')): ?>
+                <div class="error"><?= $error ?></div>
+            <?php endif; ?>
+        </div>
+
+        <div class="form-group <?= getFieldError('bio') ? 'has-error' : '' ?>">
+            <label for="bio">Биография:</label>
+            <textarea id="bio" name="bio" rows="5" required><?= getFieldValue('bio') ?></textarea>
+            <?php if ($error = getFieldError('bio')): ?>
+                <div class="error"><?= $error ?></div>
+            <?php endif; ?>
+        </div>
+
+        <div class="form-group <?= getFieldError('contract') ? 'has-error' : '' ?>">
+            <label>
+                <input type="checkbox" name="contract" <?= getFieldValue('contract') === '1' ? 'checked' : '' ?> required>
+                Согласен с условиями
+            </label>
+            <?php if ($error = getFieldError('contract')): ?>
+                <div class="error"><?= $error ?></div>
+            <?php endif; ?>
+        </div>
+
+        <button type="submit">Отправить</button>
+    </form>
 </body>
 </html>
