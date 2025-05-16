@@ -86,6 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+
         foreach ($errors as $field => $error) {
             setcookie("error_$field", $error, time() + 3600, '/');
         }
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setcookie("value_$field", $value, time() + 3600, '/');
             }
         }
-        
+        header('Location: index.php?success=1');
         include 'index.php';
         exit;
     }
