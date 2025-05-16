@@ -14,7 +14,6 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
 
     $errors = [];
     $formData = [];
@@ -66,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!empty($errors)) {
-        // Сохраняем ошибки и значения в cookies
         foreach ($errors as $key => $message) {
             setcookie("error_$key", $message, time() + 3600, '/');
         }
@@ -77,77 +75,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header('Location: index.php');
         exit;
-} else {
-
-        // Очищаем старые cookies только после успешной отправки
+    } else {
         foreach ($_COOKIE as $name => $value) {
             if (strpos($name, 'error_') === 0 || strpos($name, 'value_') === 0) {
                 setcookie($name, '', time() - 3600, '/');
             }
         }
 
+        try {
+            $pdo->beginTransaction();
 
-        foreach ($errors as $field => $error) {
-            setcookie("error_$field", $error, time() + 3600, '/');
-        }
-        
-        foreach ($formData as $field => $value) {
-            if (is_array($value)) {
-                setcookie("value_$field", implode(',', $value), time() + 3600, '/');
-            } else {
-                setcookie("value_$field", $value, time() + 3600, '/');
-            }
-        }
-        header('Location: index.php?success=1');
-        include 'index.php';
-        exit;
-    }
-
-    try {
-        $pdo->beginTransaction();
-
-        $stmt = $pdo->prepare("INSERT INTO Application (FIO, Phone_number, Email, Birth_day, Gender, Biography, Contract_accepted) 
-                              VALUES (:fio, :phone, :email, :dob, :gender, :bio, :contract)");
-        $stmt->execute([
-            ':fio' => $formData['fio'],
-            ':phone' => $formData['phone'],
-            ':email' => $formData['email'],
-            ':dob' => $formData['dob'],
-            ':gender' => $formData['gender'],
-            ':bio' => $formData['bio'],
-            ':contract' => 1
-        ]);
-
-        $application_id = $pdo->lastInsertId();
-
-        $stmt = $pdo->prepare("INSERT INTO Application_Languages (Application_ID, Language_ID) 
-                              SELECT :app_id, Language_ID FROM Programming_Languages WHERE Name = :language");
-        
-        foreach ($formData['language'] as $language) {
+            $stmt = $pdo->prepare("INSERT INTO Application (FIO, Phone_number, Email, Birth_day, Gender, Biography, Contract_accepted) 
+                                  VALUES (:fio, :phone, :email, :dob, :gender, :bio, :contract)");
             $stmt->execute([
-                ':app_id' => $application_id,
-                ':language' => $language
+                ':fio' => $formData['fio'],
+                ':phone' => $formData['phone'],
+                ':email' => $formData['email'],
+                ':dob' => $formData['dob'],
+                ':gender' => $formData['gender'],
+                ':bio' => $formData['bio'],
+                ':contract' => 1
             ]);
-        }
 
-        $pdo->commit();
+            $application_id = $pdo->lastInsertId();
 
-        
+            $stmt = $pdo->prepare("INSERT INTO Application_Languages (Application_ID, Language_ID) 
+                                  SELECT :app_id, Language_ID FROM Programming_Languages WHERE Name = :language");
 
-        foreach ($formData as $field => $value) {
-            if ($field !== 'contract') {
-                $value = is_array($value) ? implode(',', $value) : $value;
-                setcookie("success_$field", $value, time() + 60*60*24*365, '/');
+            foreach ($formData['language'] as $language) {
+                $stmt->execute([
+                    ':app_id' => $application_id,
+                    ':language' => $language
+                ]);
             }
+
+            $pdo->commit();
+
+            foreach ($formData as $field => $value) {
+                if ($field !== 'contract') {
+                    $value = is_array($value) ? implode(',', $value) : $value;
+                    setcookie("success_$field", $value, time() + 60*60*24*365, '/');
+                }
+            }
+            setcookie('success_contract', '1', time() + 60*60*24*365, '/');
+
+            header('Location: index.php?success=1');
+            exit;
+
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            die("Ошибка при сохранении данных: " . $e->getMessage());
         }
-        setcookie('success_contract', '1', time() + 60*60*24*365, '/');
-
-        header('Location: index.php?success=1');
-        exit;
-
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        die("Ошибка при сохранении данных: " . $e->getMessage());
     }
 } else {
     header('Location: index.php');
