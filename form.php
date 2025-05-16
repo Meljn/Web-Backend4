@@ -14,11 +14,7 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    foreach ($_COOKIE as $name => $value) {
-        if (strpos($name, 'error_') === 0 || strpos($name, 'value_') === 0) {
-            setcookie($name, '', time() - 3600, '/');
-        }
-    }
+    
 
     $errors = [];
     $formData = [];
@@ -70,6 +66,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!empty($errors)) {
+        // Сохраняем ошибки и значения в cookies
+        foreach ($errors as $key => $message) {
+            setcookie("error_$key", $message, time() + 3600, '/');
+        }
+        foreach ($formData as $key => $value) {
+            if (!is_array($value)) {
+                setcookie("value_$key", $value, time() + 3600, '/');
+            }
+        }
+        header('Location: index.php');
+        exit;
+} else {
+
+        // Очищаем старые cookies только после успешной отправки
+        foreach ($_COOKIE as $name => $value) {
+            if (strpos($name, 'error_') === 0 || strpos($name, 'value_') === 0) {
+                setcookie($name, '', time() - 3600, '/');
+            }
+        }
+
         foreach ($errors as $field => $error) {
             setcookie("error_$field", $error, time() + 3600, '/');
         }
@@ -115,11 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
 
-        foreach ($_COOKIE as $name => $value) {
-            if (strpos($name, 'error_') === 0 || strpos($name, 'value_') === 0) {
-                setcookie($name, '', time() - 3600, '/');
-            }
-        }
+        
 
         foreach ($formData as $field => $value) {
             if ($field !== 'contract') {
