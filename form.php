@@ -27,34 +27,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $formData[$key] = is_array($value) ? $value : trim($value);
     }
 
-    if (empty($formData['fio'])) {
-        $errors['fio'] = 'Поле ФИО обязательно для заполнения';
-    } elseif (!preg_match('/^[A-Za-zА-Яа-яЁё\s]+$/u', $formData['fio'])) {
+    if (empty($formData['fio']) || !preg_match('/^[A-Za-zА-Яа-яЁё\s]+$/u', $formData['fio'])) {
         $errors['fio'] = 'ФИО должно содержать только буквы и пробелы';
     }
 
-    if (empty($formData['phone'])) {
-        $errors['phone'] = 'Поле Телефон обязательно для заполнения';
-    } elseif (!preg_match('/^\+?[0-9]{10,15}$/', $formData['phone'])) {
+    if (empty($formData['phone']) || !preg_match('/^\+?[0-9]{10,15}$/', $formData['phone'])) {
         $errors['phone'] = 'Телефон должен содержать 10-15 цифр, может начинаться с +';
     }
 
-    if (empty($formData['email'])) {
-        $errors['email'] = 'Поле Email обязательно для заполнения';
-    } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $formData['email'])) {
-        $errors['email'] = 'Введите корректный email (пример: user@example.com)';
+    if (empty($formData['email']) || !filter_var($formData['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Введите корректный email';
     }
 
-    if (empty($formData['dob'])) {
-        $errors['dob'] = 'Поле Дата рождения обязательно для заполнения';
-    } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $formData['dob'])) {
+    if (empty($formData['dob']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $formData['dob'])) {
         $errors['dob'] = 'Введите дату в формате ГГГГ-ММ-ДД';
     }
 
-    if (empty($formData['gender'])) {
-        $errors['gender'] = 'Укажите ваш пол';
-    } elseif (!in_array($formData['gender'], ['male', 'female'])) {
-        $errors['gender'] = 'Выбран недопустимый пол';
+    if (empty($formData['gender']) || !in_array($formData['gender'], ['male', 'female'])) {
+        $errors['gender'] = 'Укажите корректный пол';
     }
 
     if (empty($formData['language'])) {
@@ -73,16 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($errors as $field => $error) {
             setcookie("error_$field", $error, time() + 3600, '/');
         }
-        
+
         foreach ($formData as $field => $value) {
-            if (is_array($value)) {
-                setcookie("value_$field", implode(',', $value), time() + 3600, '/');
-            } else {
-                setcookie("value_$field", $value, time() + 3600, '/');
-            }
+            $value = is_array($value) ? implode(',', $value) : $value;
+            setcookie("value_$field", $value, time() + 3600, '/');
         }
-        
-        include 'index.php';
+
+        header('Location: index.php');
         exit;
     }
 
@@ -124,10 +111,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($formData as $field => $value) {
             if ($field !== 'contract') {
                 $value = is_array($value) ? implode(',', $value) : $value;
-                setcookie("success_$field", $value, time() + 60*60*24*365, '/');
+                setcookie("success_$field", $value, time() + 60 * 60 * 24 * 365, '/');
             }
         }
-        setcookie('success_contract', '1', time() + 60*60*24*365, '/');
+
+        setcookie('success_contract', '1', time() + 60 * 60 * 24 * 365, '/');
 
         header('Location: index.php?success=1');
         exit;
